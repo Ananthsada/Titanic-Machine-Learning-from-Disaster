@@ -52,8 +52,11 @@ private:
     float mHLayerParameters[HLAYER_NODE_COUNT][3];
     float mOutputLayerParamter[3];
     OutputParameterMapType mOutputParamter;
+
+
+    void printWeights();
     float NodeOuput(const NodeInputParamterType& NodeInputParameter, const NodeWeightParamterType& NodeWeightParamter);
-    float ForwardPropogation(const InputParameterStruct& InputParams);
+    std::vector<float> ForwardPropogation(const InputParameterStruct& InputParams);
 };
 
 Network::Network()
@@ -81,45 +84,74 @@ void Network::Train(const InputParameterMapType& InputParameter, const OutputPar
     {
         int index = 0;
         CurrentCost = 0.0f;
+        float HLayerParamters[2][3] = {0.0f};
+        float OutputLayerParamters[3] = {0.0f};
         for(const auto& each : InputParameter)
         {
-            float out = ForwardPropogation(each.second);
+            std::vector<float> _output = ForwardPropogation(each.second);
 
-            CurrentCost += sqrt(OutputParamter[index] - out);
+            CurrentCost += (OutputParamter.at(index) - _output[2]) * (OutputParamter.at(index) - _output[2]);
             index++;
-            std::cout << out << " ";
+
+            float h1 = _output[0];
+            float h2 = _output[1];
+            float o1 = _output[2];
+            float delta = SigmoidTransient(mOutputLayerParamter[0] + (mOutputLayerParamter[1] * h1) + (mOutputLayerParamter[2] * h2));
+            float deltah1 = delta * OutputLayerParamters[1] * SigmoidTransient(HLayerParamters[0][0] + 
+                    (HLayerParamters[0][1] * each.second.Age) + (HLayerParamters[0][2] * each.second.Class));
+            float deltah2 = delta * OutputLayerParamters[2] * SigmoidTransient(HLayerParamters[1][0] + 
+                    (HLayerParamters[1][1] * each.second.Age) + (HLayerParamters[1][2] * each.second.Class));
+            HLayerParamters[0][0] += deltah1;
+            HLayerParamters[0][1] += deltah1 * each.second.Age;
+            HLayerParamters[0][2] += deltah1 * each.second.Class;
+            HLayerParamters[1][0] += deltah2;
+            HLayerParamters[1][1] += deltah2 * each.second.Age;
+            HLayerParamters[1][2] += deltah2 * each.second.Class;
+
+            OutputLayerParamters[0] += delta;
+            OutputLayerParamters[1] += delta * h1;
+            OutputLayerParamters[2] += delta * h2;
+            //std::cout << _output[2] << " ";
         }
-        std::cout << "\n";
+        //std::cout << "\n";
 
-        CurrentCost = CurrentCost / ( 2 * index);
+        CurrentCost = CurrentCost / ( 2 * InputParameter.size());
 
-        if((PrevCost - CurrentCost) < 0.001f)
+        std::cout << "Prev:" << PrevCost << " Current:" << CurrentCost << "\n";
+        if(fabs(PrevCost - CurrentCost) < 0.0001f)
         {
             break;
         }
 
-        float delta = SigmoidTransient(mOutputLayerParamter[0] + (mOutputLayerParamter[1] * ));
-        float delH1 = 0.0f;
-        float delH2 = 0.0f;
-        mHLayerParameters[0][0] = mHLayerParameters[0][0] - (SCALE_FACTOR * );
-        mHLayerParameters[0][1] = mHLayerParameters[0][1] - ;
-        mHLayerParameters[0][2] = mHLayerParameters[0][2] - ;
-        mHLayerParameters[1][0] = mHLayerParameters[1][0] - ;
-        mHLayerParameters[1][1] = mHLayerParameters[1][1] - ;
-        mHLayerParameters[1][2] = mHLayerParameters[1][2] - ;
+        mHLayerParameters[0][0] = mHLayerParameters[0][0] - (SCALE_FACTOR * (HLayerParamters[0][0] / InputParameter.size()));
+        mHLayerParameters[0][1] = mHLayerParameters[0][1] - (SCALE_FACTOR * (HLayerParamters[0][1] / InputParameter.size()));
+        mHLayerParameters[0][2] = mHLayerParameters[0][2] - (SCALE_FACTOR * (HLayerParamters[0][2] / InputParameter.size()));
+        mHLayerParameters[1][0] = mHLayerParameters[1][0] - (SCALE_FACTOR * (HLayerParamters[1][0] / InputParameter.size()));
+        mHLayerParameters[1][1] = mHLayerParameters[1][1] - (SCALE_FACTOR * (HLayerParamters[1][1] / InputParameter.size()));
+        mHLayerParameters[1][2] = mHLayerParameters[1][2] - (SCALE_FACTOR * (HLayerParamters[1][2] / InputParameter.size()));
 
-        mOutputLayerParamter[0] = mOutputLayerParamter[0] - ;
-        mOutputLayerParamter[1] = mOutputLayerParamter[1] - ;
-        mOutputLayerParamter[2] = mOutputLayerParamter[2] - ;
+        mOutputLayerParamter[0] = mOutputLayerParamter[0] - (SCALE_FACTOR * (OutputLayerParamters[0] / InputParameter.size()));
+        mOutputLayerParamter[1] = mOutputLayerParamter[1] - (SCALE_FACTOR * (OutputLayerParamters[1] / InputParameter.size()));
+        mOutputLayerParamter[2] = mOutputLayerParamter[2] - (SCALE_FACTOR * (OutputLayerParamters[2] / InputParameter.size()));
         
         PrevCost = CurrentCost;
     }
 
-    float elaspedTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+    float elaspedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
     std::cout << "Elapsed(us)=" << elaspedTime << std::endl;
+
+    printWeights();
 }
 
-float Network::ForwardPropogation(const InputParameterStruct& InputParams)
+
+void Network::printWeights()
+{
+    std::cout << "L11:{" << mHLayerParameters[0][0] << "," << mHLayerParameters[0][1] << "," << mHLayerParameters[0][2] << "}\n";
+    std::cout << "L12:{" << mHLayerParameters[1][0] << "," << mHLayerParameters[1][1] << "," << mHLayerParameters[1][2] << "}\n";
+    std::cout << "L21:{" << mOutputLayerParamter[0] << "," << mOutputLayerParamter[1] << "," << mOutputLayerParamter[2] << "}\n";
+}
+
+std::vector<float> Network::ForwardPropogation(const InputParameterStruct& InputParams)
 {
     /* hidden layer */
     //std::cout << "Age:" << InputParams.Age << " Class:" << InputParams.Class;
@@ -154,7 +186,7 @@ float Network::ForwardPropogation(const InputParameterStruct& InputParams)
     float output = NodeOuput(NodeInputParamter, NodeWeightParamter);
 
     //std::cout << " Output:" << output << "\n";
-    return output;
+    return {h1Node1Output, h1Node2Output, output};
 }
 
 float Network::NodeOuput(const NodeInputParamterType& NodeInputParameter, const NodeWeightParamterType& NodeWeightParamter)

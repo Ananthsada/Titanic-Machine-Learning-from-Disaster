@@ -27,13 +27,15 @@ int main()
             InputParameter.Age = eachRow["Age"].get<float>() / MAX_AGE;
         }
         InputParameter.Class = eachRow["Pclass"].get<float>() / MAX_CLASS;
-        std::cout << eachRow["Survived"].get<float>() << " ";
+        float out = eachRow["Survived"].get<float>();
+        //std::cout << out << " ";
 
         //OutputMap.insert({rowCount, eachRow["Survived"].get<float>()});
         InputParameterMap.insert({rowCount, InputParameter});
+        OutputParameterMap.insert({rowCount, out});
         rowCount++;
-        if(rowCount == 10)
-            break;
+        // if(rowCount == 10)
+        //     break;
     }
     std::cout << "\n";
 
