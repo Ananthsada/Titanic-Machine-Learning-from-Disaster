@@ -16,6 +16,7 @@ struct InputParameterStruct
     }
     float Age;
     float Class;
+    float Gender;
 };
 
 using InputParameterMapType = std::map<uint16_t, InputParameterStruct>;
@@ -44,12 +45,13 @@ public:
     ~Network() {}
 
     void Train(const InputParameterMapType& InputParameterMap, const OutputParameterMapType& OutputParamterMap);
+    float getOutput(const InputParameterStruct& InputParams);
 private:
     using NodeInputParamterType = std::vector<float>;
     using NodeWeightParamterType = std::vector<float>;
     using NodeBiasParamterType = std::vector<float>;
 
-    float mHLayerParameters[HLAYER_NODE_COUNT][3];
+    float mHLayerParameters[HLAYER_NODE_COUNT][4];
     float mOutputLayerParamter[3];
     OutputParameterMapType mOutputParamter;
 
@@ -62,14 +64,16 @@ private:
 Network::Network()
 {
     mHLayerParameters[0][0] = 1.0f;
-    mHLayerParameters[0][1] = 1.0f;
+    mHLayerParameters[0][1] = 0.0f;
     mHLayerParameters[0][2] = 1.0f;
+    mHLayerParameters[0][3] = 1.0f;
     mHLayerParameters[1][0] = 1.0f;
-    mHLayerParameters[1][1] = 1.0f;
+    mHLayerParameters[1][1] = 0.0f;
     mHLayerParameters[1][2] = 1.0f;
+    mHLayerParameters[1][3] = 1.0f;
 
     mOutputLayerParamter[0] = 1.0f;
-    mOutputLayerParamter[1] = 1.0f;
+    mOutputLayerParamter[1] = 0.0f;
     mOutputLayerParamter[2] = 1.0f;
 }
 
@@ -98,15 +102,17 @@ void Network::Train(const InputParameterMapType& InputParameter, const OutputPar
             float o1 = _output[2];
             float delta = SigmoidTransient(mOutputLayerParamter[0] + (mOutputLayerParamter[1] * h1) + (mOutputLayerParamter[2] * h2));
             float deltah1 = delta * OutputLayerParamters[1] * SigmoidTransient(HLayerParamters[0][0] + 
-                    (HLayerParamters[0][1] * each.second.Age) + (HLayerParamters[0][2] * each.second.Class));
+                    (HLayerParamters[0][1] * each.second.Age) + (HLayerParamters[0][2] * each.second.Class) + (HLayerParamters[0][3] * each.second.Gender));
             float deltah2 = delta * OutputLayerParamters[2] * SigmoidTransient(HLayerParamters[1][0] + 
-                    (HLayerParamters[1][1] * each.second.Age) + (HLayerParamters[1][2] * each.second.Class));
+                    (HLayerParamters[1][1] * each.second.Age) + (HLayerParamters[1][2] * each.second.Class) + (HLayerParamters[1][3] * each.second.Gender));
             HLayerParamters[0][0] += deltah1;
             HLayerParamters[0][1] += deltah1 * each.second.Age;
             HLayerParamters[0][2] += deltah1 * each.second.Class;
+            HLayerParamters[0][3] += deltah1 * each.second.Gender;
             HLayerParamters[1][0] += deltah2;
             HLayerParamters[1][1] += deltah2 * each.second.Age;
             HLayerParamters[1][2] += deltah2 * each.second.Class;
+            HLayerParamters[1][3] += deltah2 * each.second.Gender;
 
             OutputLayerParamters[0] += delta;
             OutputLayerParamters[1] += delta * h1;
@@ -159,17 +165,20 @@ std::vector<float> Network::ForwardPropogation(const InputParameterStruct& Input
     NodeInputParamter.emplace_back(1.0f);
     NodeInputParamter.emplace_back(InputParams.Age);
     NodeInputParamter.emplace_back(InputParams.Class);
+    NodeInputParamter.emplace_back(InputParams.Gender);
 
     NodeWeightParamterType NodeWeightParamter;
     NodeWeightParamter.emplace_back(mHLayerParameters[0][0]);
     NodeWeightParamter.emplace_back(mHLayerParameters[0][1]);
     NodeWeightParamter.emplace_back(mHLayerParameters[0][2]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[0][3]);
     float h1Node1Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
 
     NodeWeightParamter.clear();
     NodeWeightParamter.emplace_back(mHLayerParameters[1][0]);
     NodeWeightParamter.emplace_back(mHLayerParameters[1][1]);
     NodeWeightParamter.emplace_back(mHLayerParameters[1][2]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[1][3]);
     float h1Node2Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
 
     /* output layer */
@@ -205,6 +214,49 @@ float Network::NodeOuput(const NodeInputParamterType& NodeInputParameter, const 
     //std::cout << " After Sigmoid:" << Output;
 
     return Output;
+}
+
+
+float Network::getOutput(const InputParameterStruct& InputParams)
+{
+    /* hidden layer */
+    //std::cout << "Age:" << InputParams.Age << " Class:" << InputParams.Class;
+    NodeInputParamterType NodeInputParamter;
+    NodeInputParamter.emplace_back(1.0f);
+    NodeInputParamter.emplace_back(InputParams.Age);
+    NodeInputParamter.emplace_back(InputParams.Class);
+    NodeInputParamter.emplace_back(InputParams.Gender);
+
+    NodeWeightParamterType NodeWeightParamter;
+    NodeWeightParamter.emplace_back(mHLayerParameters[0][0]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[0][1]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[0][2]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[0][3]);
+    float h1Node1Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
+
+    NodeWeightParamter.clear();
+    NodeWeightParamter.emplace_back(mHLayerParameters[1][0]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[1][1]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[1][2]);
+    NodeWeightParamter.emplace_back(mHLayerParameters[1][3]);
+    float h1Node2Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
+
+    /* output layer */
+    NodeInputParamter.clear();
+    NodeInputParamter.emplace_back(1.0f);
+    NodeInputParamter.emplace_back(h1Node1Output);
+    NodeInputParamter.emplace_back(h1Node2Output);
+
+    NodeWeightParamter.clear();
+    NodeWeightParamter.emplace_back(mOutputLayerParamter[0]);
+    NodeWeightParamter.emplace_back(mOutputLayerParamter[1]);
+    NodeWeightParamter.emplace_back(mOutputLayerParamter[2]);
+    
+    float output = NodeOuput(NodeInputParamter, NodeWeightParamter);
+
+    output = (output > 0.008f) ? 1.0f : 0.0f;
+    //std::cout << " Output:" << output << "\n";
+    return output;
 }
 
 #endif

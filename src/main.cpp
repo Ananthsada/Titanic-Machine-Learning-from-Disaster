@@ -27,6 +27,18 @@ int main()
             InputParameter.Age = eachRow["Age"].get<float>() / MAX_AGE;
         }
         InputParameter.Class = eachRow["Pclass"].get<float>() / MAX_CLASS;
+
+        std::string Gender = eachRow["Pclass"].get<std::string>();
+
+        if(Gender == "male")
+        {
+            InputParameter.Gender = 1.0f;
+        }
+        else
+        {
+            InputParameter.Gender = 0.0f;
+        }
+
         float out = eachRow["Survived"].get<float>();
         //std::cout << out << " ";
 
@@ -41,6 +53,53 @@ int main()
 
     Network network;
     network.Train(InputParameterMap, OutputParameterMap);
+
+    csv::CSVReader TestReader(TRAIN_DATA);
+
+    rowCount = 0;
+    int sum = 0;
+    for(auto& eachRow : TestReader)
+    {
+        InputParameterStruct InputParameter;
+        if(!eachRow["Age"].is_null())
+        {
+            InputParameter.Age = eachRow["Age"].get<float>() / MAX_AGE;
+        }
+        InputParameter.Class = eachRow["Pclass"].get<float>() / MAX_CLASS;
+        float out = eachRow["Survived"].get<float>();
+
+
+        std::string Gender = eachRow["Pclass"].get<std::string>();
+
+        if(Gender == "male")
+        {
+            InputParameter.Gender = 1.0f;
+        }
+        else
+        {
+            InputParameter.Gender = 0.0f;
+        }
+
+        float output = network.getOutput(InputParameter);
+        std::cout << "Actual:" << out << " From NN:" << output << "\n";
+
+        if(fabs(out - output) != 0.0f)
+        {
+            //std::cout << "Non-Zero\n";
+            sum++;
+        }
+        else
+        {
+            //std::cout << "Zero\n";
+        }
+
+        rowCount++;
+        if(rowCount == 50)
+            break;
+    }
+    float percentage = sum / (float)rowCount;
+
+    std::cout << "Percentage:" << percentage << "\n";
 
     return 0;
 }
