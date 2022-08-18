@@ -54,10 +54,14 @@ int main()
     Network network;
     network.Train(InputParameterMap, OutputParameterMap);
 
-    csv::CSVReader TestReader(TRAIN_DATA);
+    csv::CSVReader TestReader(TEST_DATA);
 
     rowCount = 0;
     int sum = 0;
+    std::ofstream ss("./output.csv");
+    auto writer = csv::make_csv_writer(ss);
+    writer << std::vector<std::string>({"PassengerId", "Survived"});
+
     for(auto& eachRow : TestReader)
     {
         InputParameterStruct InputParameter;
@@ -66,7 +70,7 @@ int main()
             InputParameter.Age = eachRow["Age"].get<float>() / MAX_AGE;
         }
         InputParameter.Class = eachRow["Pclass"].get<float>() / MAX_CLASS;
-        float out = eachRow["Survived"].get<float>();
+        //float out = eachRow["Survived"].get<float>();
 
 
         std::string Gender = eachRow["Pclass"].get<std::string>();
@@ -81,25 +85,31 @@ int main()
         }
 
         float output = network.getOutput(InputParameter);
-        std::cout << "Actual:" << out << " From NN:" << output << "\n";
+        //std::cout << "Actual:" << out << " From NN:" << output << "\n";
 
-        if(fabs(out - output) != 0.0f)
-        {
-            //std::cout << "Non-Zero\n";
-            sum++;
-        }
-        else
-        {
-            //std::cout << "Zero\n";
-        }
+        // if(fabs(out - output) != 0.0f)
+        // {
+        //     //std::cout << "Non-Zero\n";
+        //     sum++;
+        // }
+        // else
+        // {
+        //     //std::cout << "Zero\n";
+        // }
+
+        int passengerId = eachRow["PassengerId"].get<int>();
+
+        writer << std::vector<int>({passengerId, static_cast<int>(output)});
 
         rowCount++;
-        if(rowCount == 50)
-            break;
+        // if(rowCount == 50)
+        //     break;
     }
     float percentage = sum / (float)rowCount;
 
     std::cout << "Percentage:" << percentage << "\n";
+
+    ss.close();
 
     return 0;
 }
