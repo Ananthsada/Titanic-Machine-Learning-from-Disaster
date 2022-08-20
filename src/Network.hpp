@@ -64,16 +64,16 @@ private:
 Network::Network()
 {
     mHLayerParameters[0][0] = 1.0f;
-    mHLayerParameters[0][1] = 0.0f;
+    mHLayerParameters[0][1] = 1.0f;
     mHLayerParameters[0][2] = 1.0f;
     mHLayerParameters[0][3] = 1.0f;
     mHLayerParameters[1][0] = 1.0f;
-    mHLayerParameters[1][1] = 0.0f;
+    mHLayerParameters[1][1] = 1.0f;
     mHLayerParameters[1][2] = 1.0f;
     mHLayerParameters[1][3] = 1.0f;
 
     mOutputLayerParamter[0] = 1.0f;
-    mOutputLayerParamter[1] = 0.0f;
+    mOutputLayerParamter[1] = 1.0f;
     mOutputLayerParamter[2] = 1.0f;
 }
 
@@ -173,6 +173,7 @@ std::vector<float> Network::ForwardPropogation(const InputParameterStruct& Input
     NodeWeightParamter.emplace_back(mHLayerParameters[0][2]);
     NodeWeightParamter.emplace_back(mHLayerParameters[0][3]);
     float h1Node1Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
+    std::cout << "H1:" << h1Node1Output << " ";
 
     NodeWeightParamter.clear();
     NodeWeightParamter.emplace_back(mHLayerParameters[1][0]);
@@ -180,6 +181,7 @@ std::vector<float> Network::ForwardPropogation(const InputParameterStruct& Input
     NodeWeightParamter.emplace_back(mHLayerParameters[1][2]);
     NodeWeightParamter.emplace_back(mHLayerParameters[1][3]);
     float h1Node2Output = NodeOuput(NodeInputParamter, NodeWeightParamter);
+    std::cout << "H2:" << h1Node2Output << " ";
 
     /* output layer */
     NodeInputParamter.clear();
@@ -194,7 +196,7 @@ std::vector<float> Network::ForwardPropogation(const InputParameterStruct& Input
     
     float output = NodeOuput(NodeInputParamter, NodeWeightParamter);
 
-    //std::cout << " Output:" << output << "\n";
+    std::cout << " Output:" << output << "\n";
     return {h1Node1Output, h1Node2Output, output};
 }
 
