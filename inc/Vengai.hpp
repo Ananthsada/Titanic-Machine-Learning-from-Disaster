@@ -8,7 +8,7 @@
 namespace Vengai
 {
 
-constexpr float GRADIENT_SCALE_FACTOR = 1.5f;
+constexpr float GRADIENT_SCALE_FACTOR = 2.5f;
 
 constexpr float square(float input)
 {
@@ -226,7 +226,9 @@ void Layer::updateWeights()
         std::vector<float> NewWeights;
         for(uint16_t WeightsIndex = 0; WeightsIndex < mLayerWeightsList[WeightListIndex].size(); WeightsIndex++)
         {
-            NewWeights.emplace_back(ScaleGradientInput(mLayerWeightsList[WeightListIndex][WeightsIndex], mWeightsGradientList[WeightListIndex][WeightsIndex]));
+            float gradient = ScaleGradientInput(mLayerWeightsList[WeightListIndex][WeightsIndex], mWeightsGradientList[WeightListIndex][WeightsIndex]);
+            std::cout << "Layer:" << mLayerNumber << " Node:" << WeightListIndex << " WeightIndex:" << WeightsIndex << " Before Weight:" << mLayerWeightsList[WeightListIndex][WeightsIndex] << " Delta:" << mWeightsGradientList[WeightListIndex][WeightsIndex] << " After Weight:" << gradient << "\n";
+            NewWeights.emplace_back(gradient);
         }
 
         NewLayerWeightsList.emplace_back(NewWeights);

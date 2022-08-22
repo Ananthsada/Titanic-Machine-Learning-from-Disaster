@@ -171,13 +171,13 @@ int main()
         NetworkInput.emplace_back(eachInput);
 
         rowCount++;
-        // if(rowCount == 10)
-        //     break;
+        if(rowCount == 10)
+            break;
     }
 
     network.train(NetworkInput, NetworkOutput);
 
-    //return 0;
+    return 0;
 
     csv::CSVReader TestReader(TEST_DATA);
 
