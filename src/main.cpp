@@ -129,8 +129,9 @@ int main()
 {
     Vengai::NetworkConfig networkConfig;
     networkConfig.mInputCount = 3;
-    networkConfig.mLayerCount = 2;
+    networkConfig.mLayerCount = 3;
     networkConfig.mOutputCount = 1;
+    networkConfig.mNodeCount.emplace_back(3);
     networkConfig.mNodeCount.emplace_back(2);
     networkConfig.mNodeCount.emplace_back(1);
 
@@ -171,13 +172,13 @@ int main()
         NetworkInput.emplace_back(eachInput);
 
         rowCount++;
-        if(rowCount == 10)
-            break;
+        // if(rowCount == 10)
+        //     break;
     }
 
     network.train(NetworkInput, NetworkOutput);
 
-    return 0;
+    //return 0;
 
     csv::CSVReader TestReader(TEST_DATA);
 

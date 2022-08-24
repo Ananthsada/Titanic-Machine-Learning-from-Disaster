@@ -69,6 +69,7 @@ class Layer
     LayerInputType mLayerInputList;
     LayerOutputType mLayerOutputList;
     LayerDeltaType mLayerDeltaList;
+    LayerDeltaType mAccumulatedDeltaList;
 
 public:
     Layer(LayerType layerType, uint16_t LayerNumber, uint16_t numberOfNodes, uint16_t numberOfInputs);
@@ -162,20 +163,33 @@ LayerOutputType Layer::forwardPropogate(const LayerInputType& input)
  */
 void Layer::CalculateGradientOutputLayer()
 {
+    LayerWeightsListType localWeightList = mWeightsGradientList;
+    LayerDeltaType localDeltaList = mAccumulatedDeltaList;
     mWeightsGradientList.clear();
     mLayerDeltaList.clear();
+    mAccumulatedDeltaList.clear();
     for(uint16_t WeightListIndex = 0; WeightListIndex < mLayerWeightsList.size(); WeightListIndex++)
     {
         /* Gradient for bias */
         std::vector<float> WeightsGradientList;
         float delta = SigmoidTransient(mLayerOutputList[WeightListIndex]);
-        WeightsGradientList.emplace_back(delta);
         mLayerDeltaList.emplace_back(delta);
+        float TotalDelta = delta;
+        if(localDeltaList.size() > 0)
+        {
+            TotalDelta = delta + localDeltaList[WeightListIndex];
+        }
+        WeightsGradientList.emplace_back(TotalDelta);
+        mAccumulatedDeltaList.emplace_back(TotalDelta);
 
         /* Gradient for Weights */
         for(uint16_t InputIndex = 0; InputIndex < mLayerInputList.size(); InputIndex++)
         {
             float InnerDelta = delta * mLayerInputList[InputIndex];
+            if(localWeightList.size() > 0)
+            {
+                InnerDelta += localWeightList[WeightListIndex][InputIndex];
+            }
             WeightsGradientList.emplace_back(InnerDelta);
         }
         mWeightsGradientList.emplace_back(WeightsGradientList);
@@ -184,8 +198,11 @@ void Layer::CalculateGradientOutputLayer()
 
 void Layer::CalculateGradientHiddenLayer(const Layer& NextLayer)
 {
+    LayerWeightsListType localWeightList = mWeightsGradientList;
+    LayerDeltaType localDeltaList = mAccumulatedDeltaList;
     mWeightsGradientList.clear();
     mLayerDeltaList.clear();
+    mAccumulatedDeltaList.clear();
 
     auto NextLayerDeltaList = NextLayer.DeltaList();
     auto NextLayerWeightsList = NextLayer.WeightsList();
@@ -199,10 +216,16 @@ void Layer::CalculateGradientHiddenLayer(const Layer& NextLayer)
         float delta = 0;
         for(uint16_t NextLayerWeightsIndex = 0; NextLayerWeightsIndex < NextLayerWeightsList.size(); NextLayerWeightsIndex++)
         {
-            delta += NextLayerDeltaList[WeightListIndex] * NextLayerWeightsList[NextLayerWeightsIndex][WeightListIndex] * SigmoidTransient(mLayerOutputList[WeightListIndex]);    
+            delta += NextLayerDeltaList[NextLayerWeightsIndex] * NextLayerWeightsList[NextLayerWeightsIndex][WeightListIndex] * SigmoidTransient(mLayerOutputList[WeightListIndex]);    
         }
-        WeightsGradientList.emplace_back(delta);
         mLayerDeltaList.emplace_back(delta);
+        float TotalDelta = delta;
+        if(localDeltaList.size() > 0)
+        {
+            TotalDelta += localDeltaList[WeightListIndex];
+        }
+        WeightsGradientList.emplace_back(TotalDelta);
+        mAccumulatedDeltaList.emplace_back(TotalDelta);
 
         /* Gradient for Weights */
         for(uint16_t InputIndex = 0; InputIndex < mLayerInputList.size(); InputIndex++)
@@ -212,7 +235,12 @@ void Layer::CalculateGradientHiddenLayer(const Layer& NextLayer)
             {
                 InnerDelta = delta * mLayerInputList[InputIndex];
             }
-            WeightsGradientList.emplace_back(InnerDelta);
+            float TotalDelta = delta;
+            if(localDeltaList.size() > 0)
+            {
+                TotalDelta += localWeightList[WeightListIndex][InputIndex];
+            }
+            WeightsGradientList.emplace_back(TotalDelta);
         }
         mWeightsGradientList.emplace_back(WeightsGradientList);
     }
@@ -226,8 +254,9 @@ void Layer::updateWeights()
         std::vector<float> NewWeights;
         for(uint16_t WeightsIndex = 0; WeightsIndex < mLayerWeightsList[WeightListIndex].size(); WeightsIndex++)
         {
-            float gradient = ScaleGradientInput(mLayerWeightsList[WeightListIndex][WeightsIndex], mWeightsGradientList[WeightListIndex][WeightsIndex]);
-            std::cout << "Layer:" << mLayerNumber << " Node:" << WeightListIndex << " WeightIndex:" << WeightsIndex << " Before Weight:" << mLayerWeightsList[WeightListIndex][WeightsIndex] << " Delta:" << mWeightsGradientList[WeightListIndex][WeightsIndex] << " After Weight:" << gradient << "\n";
+            float Weight = mWeightsGradientList[WeightListIndex][WeightsIndex] / 891.0f;
+            float gradient = ScaleGradientInput(mLayerWeightsList[WeightListIndex][WeightsIndex], Weight);
+            //std::cout << "Layer:" << mLayerNumber << " Node:" << WeightListIndex << " WeightIndex:" << WeightsIndex << " Before Weight:" << mLayerWeightsList[WeightListIndex][WeightsIndex] << " Delta:" << mWeightsGradientList[WeightListIndex][WeightsIndex] << " After Weight:" << gradient << "\n";
             NewWeights.emplace_back(gradient);
         }
 
@@ -289,7 +318,7 @@ void Network::train(const NetworkInputType& input, const NetworkOutputType& outp
 {
     /* Run until finding local minimum of cost function */
     float CurrentCalculatedCost = 0;
-    float PreviousCalculatedCost = 0;
+    float PreviousCalculatedCost = 2.0f;
 
     auto start = std::chrono::steady_clock::now();
     std::cout << "Total No of inputs:" << input.size() << "\n";
@@ -299,8 +328,11 @@ void Network::train(const NetworkInputType& input, const NetworkOutputType& outp
     //     std::cout << each.size() <<  " ";
     // }
     // std::cout << "}\n";
-    while(true)
+    uint16_t MAX_ITER = 500;
+    uint16_t IterCount = 0;
+    while(IterCount < MAX_ITER)
     {
+        ++IterCount;
         CurrentCalculatedCost = 0;
         /* forward propogation for each input */
         for(size_t InputIndex = 0; InputIndex < input.size(); InputIndex++)
@@ -353,8 +385,8 @@ void Network::train(const NetworkInputType& input, const NetworkOutputType& outp
 
         CurrentCalculatedCost = CurrentCalculatedCost / ( 2 * input.size());
         std::cout << "Previous Cost:" << PreviousCalculatedCost << " Current Cost:" << CurrentCalculatedCost << "\n";
-        if(fabs(PreviousCalculatedCost - CurrentCalculatedCost) <= 0.0000001f)
-                break;
+        // if(PreviousCalculatedCost <= CurrentCalculatedCost)
+        //         break;
 
         PreviousCalculatedCost = CurrentCalculatedCost;
         
@@ -377,7 +409,6 @@ float Network::test(const std::vector<float>& input)
     float PreviousCalculatedCost = 0;
 
     LayerInputType LayerInput;
-    LayerOutputType LayerOutput;
 
     for(auto& eachLayer : mLayersList)
     {
